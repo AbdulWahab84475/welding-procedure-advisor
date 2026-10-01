@@ -1,0 +1,5 @@
+streamlit
+crewai
+groq
+pandas
+numpy
