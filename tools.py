@@ -1,154 +1,108 @@
 import pandas as pd
+
 from crewai.tools import tool
 
 
-# ---------------------------------------------------------
-# Load welding database
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Tool 1: Search Welding Database
+# --------------------------------------------------
 
-def load_database():
-    return pd.read_csv("welding_database.csv")
-
-
-# ---------------------------------------------------------
-# TOOL 1: Search Welding Database
-# ---------------------------------------------------------
-
-@tool("search_welding_database")
+@tool("Search Welding Database")
 def search_welding_database(
     material: str,
     process: str,
-    thickness_mm: float
+    thickness_mm: float,
 ) -> str:
     """
-    Search the welding database for suitable welding
-    process and parameter information.
+    Search the welding database for a material,
+    welding process, and thickness.
     """
 
-    df = load_database()
+    df = pd.read_csv("welding_database.csv")
 
-    results = df[
-        (df["material"].str.lower() == material.lower()) &
-        (df["process"].str.lower() == process.lower()) &
-        (df["thickness_min_mm"] <= thickness_mm) &
-        (df["thickness_max_mm"] >= thickness_mm)
+    result = df[
+        (df["material"].str.lower() == material.lower())
+        & (df["process"].str.lower() == process.lower())
+        & (df["thickness_min_mm"] <= thickness_mm)
+        & (df["thickness_max_mm"] >= thickness_mm)
     ]
 
-    if results.empty:
-        return "No matching welding data was found in the database."
+    if result.empty:
+        return "No matching welding procedure data was found."
 
-    row = results.iloc[0]
-
-    return f"""
-Material: {row['material']}
-Process: {row['process']}
-
-Thickness range:
-{row['thickness_min_mm']} - {row['thickness_max_mm']} mm
-
-Joint types:
-{row['joint_types']}
-
-Positions:
-{row['positions']}
-
-Filler category:
-{row['filler_category']}
-
-Shielding gas:
-{row['shielding_gas']}
-
-Polarity:
-{row['polarity']}
-
-Current:
-{row['current_min_a']} - {row['current_max_a']} A
-
-Voltage:
-{row['voltage_min_v']} - {row['voltage_max_v']} V
-
-Notes:
-{row['notes']}
-"""
+    return result.to_string(index=False)
 
 
-# ---------------------------------------------------------
-# TOOL 2: Heat Input Calculator
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Tool 2: Heat Input Calculator
+# --------------------------------------------------
 
-@tool("calculate_heat_input")
+@tool("Calculate Welding Heat Input")
 def calculate_heat_input(
     voltage: float,
     current: float,
     travel_speed_mm_min: float,
-    efficiency: float
+    efficiency: float = 0.8,
 ) -> str:
     """
-    Calculate approximate welding heat input.
-
-    Result is returned in kJ/mm.
+    Calculate approximate welding heat input in kJ/mm.
     """
 
     if travel_speed_mm_min <= 0:
         return "Travel speed must be greater than zero."
 
     heat_input = (
-        voltage * current * 60 * efficiency
+        voltage
+        * current
+        * 60
+        * efficiency
     ) / (1000 * travel_speed_mm_min)
 
     return f"Approximate heat input: {heat_input:.3f} kJ/mm"
 
 
-# ---------------------------------------------------------
-# TOOL 3: Thickness Check
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Tool 3: Process and Thickness Check
+# --------------------------------------------------
 
-@tool("check_process_thickness")
+@tool("Check Process Thickness")
 def check_process_thickness(
     material: str,
     process: str,
-    thickness_mm: float
+    thickness_mm: float,
 ) -> str:
     """
-    Check whether the requested material, process and
-    thickness exist in the current welding database.
+    Check whether the database contains the requested
+    material, welding process, and thickness.
     """
 
-    df = load_database()
+    df = pd.read_csv("welding_database.csv")
 
-    results = df[
-        (df["material"].str.lower() == material.lower()) &
-        (df["process"].str.lower() == process.lower()) &
-        (df["thickness_min_mm"] <= thickness_mm) &
-        (df["thickness_max_mm"] >= thickness_mm)
+    result = df[
+        (df["material"].str.lower() == material.lower())
+        & (df["process"].str.lower() == process.lower())
+        & (df["thickness_min_mm"] <= thickness_mm)
+        & (df["thickness_max_mm"] >= thickness_mm)
     ]
 
-    if results.empty:
+    if result.empty:
         return (
-            "The requested material/process/thickness combination "
-            "was not found in the database. Do not assume suitability."
+            "No matching combination was found in the "
+            "starter welding database."
         )
 
-    return (
-        "The material, process and thickness combination "
-        "exists in the current reference database."
-    )
+    return "The requested material, process, and thickness are covered by the database."
 
 
-# ---------------------------------------------------------
-# TOOL 4: Professional Review Check
-# ---------------------------------------------------------
+# --------------------------------------------------
+# Tool 4: Professional Review Check
+# --------------------------------------------------
 
-@tool("check_professional_review")
-def check_professional_review(
-    application: str
-) -> str:
+@tool("Check Professional Review")
+def check_professional_review(application: str) -> str:
     """
-    Determine whether the application should receive
-    professional/code review.
+    Check whether professional/code review may be required.
     """
-
-    application_lower = application.lower()
 
     critical_terms = [
         "pressure vessel",
@@ -156,24 +110,26 @@ def check_professional_review(
         "pipeline",
         "lifting",
         "crane",
-        "structural",
         "bridge",
+        "structural",
         "critical",
-        "pressure"
+        "pressure",
     ]
 
-    for term in critical_terms:
-        if term in application_lower:
-            return (
-                "PROFESSIONAL REVIEW REQUIRED: "
-                "This application may involve safety-critical "
-                "requirements. Verify the procedure against the "
-                "applicable code, qualified WPS/PQR/WPQ and "
-                "qualified welding personnel."
-            )
+    application_lower = application.lower()
+
+    found_terms = [
+        term for term in critical_terms
+        if term in application_lower
+    ]
+
+    if found_terms:
+        return (
+            "Professional/code review is required or strongly recommended "
+            f"because the application includes: {', '.join(found_terms)}."
+        )
 
     return (
-        "Basic preliminary guidance may be provided, but the "
-        "final welding procedure should still be verified "
-        "against applicable requirements."
+        "No obvious safety-critical application term was detected. "
+        "Normal engineering review is still recommended."
     )
