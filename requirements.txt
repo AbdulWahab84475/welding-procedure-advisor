@@ -3,3 +3,4 @@ crewai
 groq
 pandas
 numpy
+litellm
