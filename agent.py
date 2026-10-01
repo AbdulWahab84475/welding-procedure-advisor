@@ -1,74 +1,48 @@
 import os
 
-from crewai import Agent, LLM
+from crewai import Agent, Crew, Task, LLM
 
 from tools import (
     search_welding_database,
     calculate_heat_input,
     check_process_thickness,
-    check_professional_review
+    check_professional_review,
 )
 
 
-# ---------------------------------------------------------
-# Groq LLM
-# ---------------------------------------------------------
+# Get Groq API key
+api_key = os.environ.get("GROQ_API_KEY")
 
+
+# Groq LLM
 llm = LLM(
     model="groq/openai/gpt-oss-120b",
-    api_key=os.environ.get("GROQ_API_KEY")
+    api_key=api_key,
 )
 
 
-# ---------------------------------------------------------
-# Welding Procedure Advisor
-# ---------------------------------------------------------
-
+# Create the welding agent
 welding_agent = Agent(
     role="Welding Procedure Advisor",
-
-    goal="""
-    Analyze welding requirements and provide clear,
-    preliminary welding procedure guidance using the
-    available engineering database and tools.
-    """,
-
-    backstory="""
-    You are a mechanical engineering welding advisor.
-
-    You help users understand welding process selection,
-    filler categories, shielding gas, preliminary parameter
-    ranges, joint preparation considerations and possible
-    welding defects.
-
-    You must use the available engineering tools instead
-    of inventing welding data.
-
-    You must clearly state when information is missing.
-
-    You must never present preliminary guidance as a
-    certified or approved Welding Procedure Specification.
-
-    For safety-critical applications, recommend review by
-    a qualified welding professional and verification
-    against the applicable code and qualified WPS/PQR/WPQ.
-    """,
-
-    llm=llm,
-
+    goal="Provide safe and practical preliminary welding procedure guidance.",
+    backstory=(
+        "You are a welding engineering assistant. "
+        "You help users understand welding process selection, "
+        "filler materials, shielding gases, and starting parameters. "
+        "You must use the provided tools and must not invent technical data."
+    ),
     tools=[
         search_welding_database,
         calculate_heat_input,
         check_process_thickness,
-        check_professional_review
+        check_professional_review,
     ],
+    llm=llm,
+    verbose=True,
+)
 
-    verbose=True
-) 
-from crewai import Task, Crew
 
-
-def create_welding_task(user_request: str):
+def run_agent(user_request):
 
     task = Task(
         description=f"""
@@ -76,57 +50,34 @@ def create_welding_task(user_request: str):
 
         {user_request}
 
-        Follow this process:
+        Use the available welding database and tools.
 
-        1. Identify the material.
-        2. Identify material thickness.
-        3. Identify joint type.
-        4. Identify welding position.
-        5. Identify available welding process.
-        6. Identify application and production requirements.
-        7. Use the welding database when relevant.
-        8. Use engineering tools when calculations are needed.
-        9. Identify missing information.
-        10. Provide a preliminary recommendation.
-        11. Explain why the recommendation is suitable.
-        12. Mention important risks or possible defects.
-        13. State whether professional/code review is required.
+        Provide:
 
-        Do not invent parameter values.
-        Use the available database and tools.
-
-        Keep the answer simple and easy for a beginner
-        to understand.
-        """,
-
-        expected_output="""
-        A structured welding procedure advisory containing:
-
-        1. Recommended process
-        2. Reason
-        3. Filler category
+        1. Recommended welding process
+        2. Why this process is suitable
+        3. Suitable filler category
         4. Shielding gas
-        5. Preliminary parameter range
+        5. Starting parameter range if available
         6. Joint preparation considerations
-        7. Potential defects
-        8. Missing information
-        9. Safety/qualification note
+        7. Possible welding defects
+        8. Important safety or qualification notes
+
+        Do not invent welding parameters.
+
+        Clearly state that the result is preliminary guidance
+        and is NOT a certified WPS.
         """,
-
-        agent=welding_agent
+        expected_output="A clear and beginner-friendly welding procedure recommendation.",
+        agent=welding_agent,
     )
-
-    return task
-  def run_agent(user_request: str):
-
-    task = create_welding_task(user_request)
 
     crew = Crew(
         agents=[welding_agent],
         tasks=[task],
-        verbose=False
+        verbose=True,
     )
 
     result = crew.kickoff()
 
-    return str(result)
+    return result
