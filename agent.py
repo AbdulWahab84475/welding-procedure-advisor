@@ -1,4 +1,4 @@
-import os
+import streamlit as st
 
 from crewai import Agent, Crew, Task, LLM
 
@@ -10,11 +10,8 @@ from tools import (
 )
 
 
-# Get Groq API key
-api_key = os.environ.get("GROQ_API_KEY")
+api_key = st.secrets["GROQ_API_KEY"]
 
-
-# Groq LLM
 llm = LLM(
     model="groq/openai/gpt-oss-120b",
     api_key=api_key,
