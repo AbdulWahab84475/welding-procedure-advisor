@@ -1,6 +1,3 @@
-streamlit
-crewai
-groq
-pandas
-numpy
+streamlit>=1.40,<2
+crewai==1.15.23
 litellm
