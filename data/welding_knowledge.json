@@ -1,1 +1,261 @@
+{
+  "materials": {
+    "Mild Steel": {
+      "group": "Carbon steel",
+      "general_weldability": "Generally weldable",
+      "important_checks": [
+        "Exact material grade",
+        "Thickness",
+        "Joint design",
+        "Hydrogen control where applicable",
+        "Required mechanical properties"
+      ]
+    },
 
+    "AISI 1045": {
+      "group": "Medium-carbon steel",
+      "general_weldability": "Requires more attention than low-carbon steel",
+      "important_checks": [
+        "Exact material condition",
+        "Thickness",
+        "Preheat requirements",
+        "Cooling control",
+        "Hardness and cracking risk"
+      ]
+    },
+
+    "Stainless Steel 304": {
+      "group": "Austenitic stainless steel",
+      "general_weldability": "Generally weldable",
+      "important_checks": [
+        "Filler compatibility",
+        "Heat input",
+        "Interpass temperature",
+        "Corrosion requirements",
+        "Surface contamination"
+      ]
+    },
+
+    "Stainless Steel 316": {
+      "group": "Austenitic stainless steel",
+      "general_weldability": "Generally weldable",
+      "important_checks": [
+        "316-compatible filler",
+        "Heat input",
+        "Interpass temperature",
+        "Corrosion service",
+        "Surface cleanliness"
+      ]
+    },
+
+    "Stainless Steel 316L": {
+      "group": "Austenitic stainless steel",
+      "general_weldability": "Generally weldable",
+      "important_checks": [
+        "316L-compatible filler",
+        "Heat input",
+        "Interpass temperature",
+        "Corrosion service",
+        "Surface cleanliness"
+      ]
+    },
+
+    "Cast Iron": {
+      "group": "Cast iron",
+      "general_weldability": "Specialized repair",
+      "important_checks": [
+        "Exact cast iron grade",
+        "Casting condition",
+        "Defect type",
+        "Preheat strategy",
+        "Filler selection",
+        "Cooling strategy",
+        "Machining requirement",
+        "Final inspection"
+      ]
+    },
+
+    "Ductile Iron": {
+      "group": "Ductile cast iron",
+      "general_weldability": "Specialized repair",
+      "important_checks": [
+        "Exact grade",
+        "Casting condition",
+        "Defect type",
+        "Preheat strategy",
+        "Filler selection",
+        "Cooling strategy",
+        "Hardness",
+        "Final inspection"
+      ]
+    },
+
+    "Aluminum 6061": {
+      "group": "Aluminum alloy",
+      "general_weldability": "Process and temper dependent",
+      "important_checks": [
+        "Alloy condition",
+        "Temper",
+        "Filler compatibility",
+        "Cleaning",
+        "Heat input",
+        "Required properties"
+      ]
+    }
+  },
+
+  "processes": {
+    "SMAW": {
+      "typical_use": [
+        "Repair",
+        "Maintenance",
+        "General fabrication"
+      ],
+      "advantages": [
+        "Portable",
+        "Suitable for repair work",
+        "Works in outdoor environments"
+      ],
+      "limitations": [
+        "Electrode changes",
+        "Slag removal",
+        "Lower productivity than some continuous processes"
+      ]
+    },
+
+    "GMAW": {
+      "typical_use": [
+        "Production fabrication",
+        "General manufacturing"
+      ],
+      "advantages": [
+        "Continuous wire",
+        "High productivity"
+      ],
+      "limitations": [
+        "Requires shielding gas",
+        "Sensitive to wind"
+      ]
+    },
+
+    "GTAW": {
+      "typical_use": [
+        "Precision welding",
+        "Thin materials",
+        "High-quality welds"
+      ],
+      "advantages": [
+        "Excellent control",
+        "Good weld quality"
+      ],
+      "limitations": [
+        "Lower productivity",
+        "Requires higher operator skill"
+      ]
+    },
+
+    "FCAW": {
+      "typical_use": [
+        "Production",
+        "Structural fabrication",
+        "Repair"
+      ],
+      "advantages": [
+        "High deposition rate",
+        "Continuous wire"
+      ],
+      "limitations": [
+        "Slag may require removal",
+        "Consumable selection is important"
+      ]
+    }
+  },
+
+  "consumables": {
+    "E7018": {
+      "process": "SMAW",
+      "material_group": "Carbon and low-alloy steels",
+      "note": "Verify exact classification and manufacturer requirements."
+    },
+
+    "E316L-16": {
+      "process": "SMAW",
+      "material_group": "Austenitic stainless steel",
+      "note": "Verify exact classification and manufacturer requirements."
+    },
+
+    "E316L-17": {
+      "process": "SMAW",
+      "material_group": "Austenitic stainless steel",
+      "note": "Verify exact classification and manufacturer requirements."
+    },
+
+    "ER316L": {
+      "process": "GTAW",
+      "material_group": "Austenitic stainless steel",
+      "note": "Verify exact classification and manufacturer requirements."
+    }
+  },
+
+  "inspection": {
+    "Visual Inspection": {
+      "purpose": "Surface and weld appearance examination."
+    },
+
+    "DPT": {
+      "purpose": "Surface-breaking discontinuities on suitable non-porous surfaces."
+    },
+
+    "MT": {
+      "purpose": "Surface and near-surface discontinuities in suitable ferromagnetic materials."
+    },
+
+    "UT": {
+      "purpose": "Volumetric examination where appropriate."
+    },
+
+    "RT": {
+      "purpose": "Radiographic volumetric examination where required."
+    }
+  },
+
+  "rules": {
+    "cast_component": [
+      "Identify exact casting material.",
+      "Determine repair or joining purpose.",
+      "Assess defect or worn region.",
+      "Consider preheat and controlled cooling.",
+      "Select compatible consumable.",
+      "Consider distortion and cracking.",
+      "Define appropriate inspection."
+    ],
+
+    "repair": [
+      "Identify defect.",
+      "Remove defective material.",
+      "Prepare welding area.",
+      "Select compatible welding process.",
+      "Select compatible filler.",
+      "Control welding sequence.",
+      "Inspect repaired region."
+    ],
+
+    "build_up": [
+      "Determine original dimension.",
+      "Determine current worn dimension.",
+      "Determine required build-up.",
+      "Consider machining allowance.",
+      "Select compatible filler.",
+      "Plan weld passes.",
+      "Inspect final surface."
+    ]
+  },
+
+  "standards": {
+    "AWS D1.1": "Applicable structural steel welding requirements.",
+    "ASME Section IX": "Welding procedure and welder qualification framework.",
+    "ISO 15614": "Welding procedure specification and qualification framework.",
+    "ISO 9606": "Welder qualification framework.",
+    "ISO 17637": "Visual testing of fusion-welded joints."
+  }
+}
