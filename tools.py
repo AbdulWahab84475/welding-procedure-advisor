@@ -1,135 +1,429 @@
-import pandas as pd
-
 from crewai.tools import tool
 
+from database import (
+    get_material,
+    get_process,
+    get_consumable,
+    get_inspection,
+    get_rules,
+    get_standards
+)
 
-# --------------------------------------------------
-# Tool 1: Search Welding Database
-# --------------------------------------------------
+from welding_data import (
+    CAST_MATERIALS,
+    CRITICAL_APPLICATIONS,
+    PURPOSE_DESCRIPTIONS
+)
 
-@tool("Search Welding Database")
-def search_welding_database(
-    material: str,
-    process: str,
-    thickness_mm: float,
+
+@tool("material_analysis")
+def material_analysis(
+    material_a: str,
+    material_b: str
 ) -> str:
     """
-    Search the welding database for a material,
-    welding process, and thickness.
+    Analyze the two materials involved in the welding job.
     """
 
-    df = pd.read_csv("welding_database.csv")
+    data_a = get_material(material_a)
+    data_b = get_material(material_b)
 
-    result = df[
-        (df["material"].str.lower() == material.lower())
-        & (df["process"].str.lower() == process.lower())
-        & (df["thickness_min_mm"] <= thickness_mm)
-        & (df["thickness_max_mm"] >= thickness_mm)
-    ]
+    result = f"""
+MATERIAL ANALYSIS
 
-    if result.empty:
-        return "No matching welding procedure data was found."
+Material A:
+{material_a}
 
-    return result.to_string(index=False)
+Group:
+{data_a.get("group", "Unknown")}
+
+Weldability:
+{data_a.get("general_weldability", "Unknown")}
+
+Important checks:
+{data_a.get("important_checks", [])}
+
+Material B:
+{material_b}
+
+Group:
+{data_b.get("group", "Unknown")}
+
+Weldability:
+{data_b.get("general_weldability", "Unknown")}
+
+Important checks:
+{data_b.get("important_checks", [])}
+"""
+
+    return result
 
 
-# --------------------------------------------------
-# Tool 2: Heat Input Calculator
-# --------------------------------------------------
-
-@tool("Calculate Welding Heat Input")
-def calculate_heat_input(
-    voltage: float,
-    current: float,
-    travel_speed_mm_min: float,
-    efficiency: float = 0.8,
+@tool("thickness_analysis")
+def thickness_analysis(
+    thickness_a: float,
+    thickness_b: float
 ) -> str:
     """
-    Calculate approximate welding heat input in kJ/mm.
+    Analyze thickness information.
     """
 
-    if travel_speed_mm_min <= 0:
-        return "Travel speed must be greater than zero."
+    difference = abs(
+        thickness_a - thickness_b
+    )
 
-    heat_input = (
-        voltage
-        * current
-        * 60
-        * efficiency
-    ) / (1000 * travel_speed_mm_min)
+    return f"""
+THICKNESS ANALYSIS
 
-    return f"Approximate heat input: {heat_input:.3f} kJ/mm"
+Material A thickness:
+{thickness_a} mm
+
+Material B thickness:
+{thickness_b} mm
+
+Thickness difference:
+{difference:.2f} mm
+
+Engineering considerations:
+- Joint design may depend on thickness.
+- Welding heat input may be affected.
+- Number of passes may depend on joint design.
+- Distortion and thermal effects should be considered.
+- Final parameters must come from qualified procedure data.
+"""
 
 
-# --------------------------------------------------
-# Tool 3: Process and Thickness Check
-# --------------------------------------------------
-
-@tool("Check Process Thickness")
-def check_process_thickness(
-    material: str,
-    process: str,
-    thickness_mm: float,
+@tool("cast_component_analysis")
+def cast_component_analysis(
+    material_a: str,
+    material_b: str,
+    cast_condition: str
 ) -> str:
     """
-    Check whether the database contains the requested
-    material, welding process, and thickness.
+    Analyze whether a casting requires special consideration.
     """
 
-    df = pd.read_csv("welding_database.csv")
+    cast_material_detected = (
+        material_a in CAST_MATERIALS
+        or material_b in CAST_MATERIALS
+    )
 
-    result = df[
-        (df["material"].str.lower() == material.lower())
-        & (df["process"].str.lower() == process.lower())
-        & (df["thickness_min_mm"] <= thickness_mm)
-        & (df["thickness_max_mm"] >= thickness_mm)
-    ]
+    if cast_condition == "Yes" or cast_material_detected:
 
-    if result.empty:
-        return (
-            "No matching combination was found in the "
-            "starter welding database."
+        rules = get_rules("cast_component")
+
+        return """
+CAST COMPONENT DETECTED
+
+Special attention is required.
+
+Recommended assessment:
+
+""" + "\n".join(
+            f"- {rule}"
+            for rule in rules
         )
 
-    return "The requested material, process, and thickness are covered by the database."
+    if cast_condition == "Unknown":
+
+        return """
+CAST CONDITION UNKNOWN
+
+The engineer/user should confirm whether
+the component is cast before finalizing
+the welding procedure.
+"""
+
+    return """
+No casting has been identified from the supplied information.
+"""
 
 
-# --------------------------------------------------
-# Tool 4: Professional Review Check
-# --------------------------------------------------
-
-@tool("Check Professional Review")
-def check_professional_review(application: str) -> str:
+@tool("welding_purpose_analysis")
+def welding_purpose_analysis(
+    purpose: str
+) -> str:
     """
-    Check whether professional/code review may be required.
+    Analyze why welding is required.
     """
 
-    critical_terms = [
-        "pressure vessel",
-        "boiler",
-        "pipeline",
-        "lifting",
-        "crane",
-        "bridge",
-        "structural",
-        "critical",
-        "pressure",
+    description = PURPOSE_DESCRIPTIONS.get(
+        purpose,
+        "Purpose not recognized."
+    )
+
+    if "Repair" in purpose:
+
+        rules = get_rules("repair")
+
+    elif (
+        "Build-up" in purpose
+        or "dimension" in purpose.lower()
+        or "service life" in purpose.lower()
+    ):
+
+        rules = get_rules("build_up")
+
+    else:
+
+        rules = [
+            "Confirm joint configuration.",
+            "Confirm required joint properties.",
+            "Select compatible welding process.",
+            "Select compatible consumable.",
+            "Define inspection requirements."
+        ]
+
+    return f"""
+WELDING PURPOSE
+
+Purpose:
+{purpose}
+
+Description:
+{description}
+
+Engineering workflow:
+
+""" + "\n".join(
+        f"- {rule}"
+        for rule in rules
+    )
+
+
+@tool("process_analysis")
+def process_analysis(
+    available_processes: str
+) -> str:
+    """
+    Analyze available welding processes.
+    """
+
+    processes = [
+        process.strip()
+        for process in available_processes.split(",")
     ]
+
+    results = []
+
+    for process in processes:
+
+        data = get_process(process)
+
+        if not data:
+
+            results.append(
+                f"{process}: No database information."
+            )
+
+            continue
+
+        results.append(
+            f"""
+{process}
+
+Typical use:
+{data.get("typical_use", [])}
+
+Advantages:
+{data.get("advantages", [])}
+
+Limitations:
+{data.get("limitations", [])}
+"""
+        )
+
+    return "\n".join(results)
+
+
+@tool("consumable_analysis")
+def consumable_analysis(
+    consumable: str
+) -> str:
+    """
+    Check welding consumable information.
+    """
+
+    if not consumable:
+
+        return """
+No consumable was supplied.
+
+The agent should identify the required
+filler/consumable information that is missing.
+"""
+
+    data = get_consumable(consumable)
+
+    if not data:
+
+        return f"""
+Consumable:
+{consumable}
+
+This consumable is not currently available
+in the internal database.
+
+Verify it using the manufacturer datasheet
+or qualified welding documentation.
+"""
+
+    return f"""
+CONSUMABLE ANALYSIS
+
+Consumable:
+{consumable}
+
+Process:
+{data.get("process", "Unknown")}
+
+Material group:
+{data.get("material_group", "Unknown")}
+
+Note:
+{data.get("note", "")}
+"""
+
+
+@tool("temperature_analysis")
+def temperature_analysis(
+    material_a: str,
+    material_b: str,
+    cast_condition: str,
+    thickness_a: float,
+    thickness_b: float
+) -> str:
+    """
+    Determine whether temperature control requires attention.
+    """
+
+    casting = (
+        cast_condition == "Yes"
+        or material_a in CAST_MATERIALS
+        or material_b in CAST_MATERIALS
+    )
+
+    if casting:
+
+        return """
+TEMPERATURE CONTROL
+
+Casting is involved.
+
+Do not automatically assign a numerical
+preheat or interpass temperature.
+
+Check:
+- Qualified WPS/PQR
+- Exact casting grade
+- Thickness
+- Manufacturer information
+- Applicable code
+- Engineering approval
+- Controlled cooling requirements
+"""
+
+    return f"""
+TEMPERATURE CONTROL
+
+Material A:
+{material_a}
+
+Material B:
+{material_b}
+
+Thickness:
+{thickness_a} mm / {thickness_b} mm
+
+No universal numerical temperature has been
+assigned by this tool.
+
+The final value should be supported by:
+- Qualified WPS/PQR
+- Applicable code
+- Material specification
+- Manufacturer data
+- Engineering review
+"""
+
+
+@tool("inspection_analysis")
+def inspection_analysis(
+    material_a: str,
+    material_b: str,
+    purpose: str,
+    cast_condition: str
+) -> str:
+    """
+    Recommend possible inspection methods.
+    """
+
+    methods = [
+        "Visual Inspection"
+    ]
+
+    if (
+        "Repair" in purpose
+        or cast_condition == "Yes"
+    ):
+
+        methods.append("DPT or MT where applicable")
+
+    methods.append(
+        "UT where volumetric examination is required"
+    )
+
+    methods.append(
+        "RT where specifically required"
+    )
+
+    return """
+INSPECTION CONSIDERATIONS
+
+Possible methods:
+
+""" + "\n".join(
+        f"- {method}"
+        for method in methods
+    )
+
+
+@tool("standards_check")
+def standards_check(
+    application: str
+) -> str:
+    """
+    Identify potentially relevant welding standards.
+    """
 
     application_lower = application.lower()
 
-    found_terms = [
-        term for term in critical_terms
-        if term in application_lower
-    ]
+    results = []
 
-    if found_terms:
-        return (
-            "Professional/code review is required or strongly recommended "
-            f"because the application includes: {', '.join(found_terms)}."
+    for name, description in get_standards().items():
+
+        results.append(
+            f"- {name}: {description}"
         )
 
-    return (
-        "No obvious safety-critical application term was detected. "
-        "Normal engineering review is still recommended."
+    critical = any(
+        item in application_lower
+        for item in CRITICAL_APPLICATIONS
     )
+
+    result = """
+POTENTIALLY RELEVANT STANDARDS
+
+""" + "\n".join(results)
+
+    if critical:
+
+        result += """
+
+IMPORTANT:
+The application appears potentially safety-critical.
+Applicable code requirements and qualified welding
+procedures must be confirmed before use.
+"""
+
+    return result
